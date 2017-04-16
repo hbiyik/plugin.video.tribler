@@ -6,8 +6,9 @@
 		<import addon="xbmc.python" version="2.19.0"/>
 		<import addon="script.module.triblercore" version="7.0"/>
 		<import addon="script.module.requests" version="2.12.4"/>
+		<import addon="script.module.abi" version="0.0.1"/>
 	</requires>
-	<extension point="xbmc.python.pluginsource" library="tribler.py">
+	<extension point="xbmc.python.pluginsource" library="addon.py">
 		<provides>video</provides>
 	</extension>
 	<extension point="xbmc.service" library="service.py" start="startup"/>

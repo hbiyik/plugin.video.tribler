@@ -1,7 +1,6 @@
 import sys
 import urlparse
 import paths
-
 from client.module.setting import Setting
 
 args = dict(urlparse.parse_qsl(sys.argv[2].replace('?', '')))
