@@ -44,12 +44,21 @@ class server(threading.Thread):
 
 
 if __name__ == '__main__':
-    monitor = xbmc.Monitor()
+    try:
+        mon = xbmc.Monitor()
+
+        def isaborted(*args, **kwargs):
+            return mon.abortRequested(*args, **kwargs)
+        wait = mon.waitForAbort
+    except AttributeError:
+        def isaborted(*args, **kwargs):
+            return xbmc.abortRequested
+        wait = xbmc.sleep
     core = server()
     core.start()
 
-    while not monitor.abortRequested():
-        if monitor.waitForAbort(5):
+    while not isaborted():
+        if wait(5):
             core.shutdown()
             break
 core.join()
