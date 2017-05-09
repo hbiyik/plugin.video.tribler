@@ -1,15 +1,13 @@
 import sys
 
-import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
-import json
-import requests
 
 sysaddon = sys.argv[0]
 syshandle = int(sys.argv[1])
+
 
 class Channel(object):
     def __init__(self, api_port=8085):
@@ -23,7 +21,8 @@ class Channel(object):
             name = channel_info.get('name')
             channel_id = channel_info.get('dispersy_cid')
             subscribed = channel_info.get('subscribed')
-            self.addDirectoryItem(name, 'open-channel&channel-id=%s&name=%s' % (channel_id, name), 'recommanded.png', 'DefaultMovies.png')
+            self.addDirectoryItem(name, 'open-channel&channel-id=%s&name=%s' %
+                                  (channel_id, name), 'recommanded.png', 'DefaultMovies.png')
 
         self.endDirectory()
 
@@ -36,7 +35,8 @@ class Channel(object):
             name = channel_info.get('name')
             channel_id = channel_info.get('dispersy_cid')
             subscribed = channel_info.get('subscribed')
-            self.addDirectoryItem(name, 'open-channel&channel-id=%s&name=%s' % (channel_id, name), 'recommanded.png', 'DefaultMovies.png')
+            self.addDirectoryItem(name, 'open-channel&channel-id=%s&name=%s' %
+                                  (channel_id, name), 'recommanded.png', 'DefaultMovies.png')
 
         self.endDirectory()
 
@@ -48,7 +48,8 @@ class Channel(object):
             name = channel_info.get('name')
             channel_id = channel_info.get('dispersy_cid')
             subscribed = channel_info.get('subscribed')
-            self.addDirectoryItem(name, 'open-channel&channel-id=%s&name=%s' % (channel_id, name), 'recommanded.png', 'DefaultMovies.png')
+            self.addDirectoryItem(name, 'open-channel&channel-id=%s&name=%s' %
+                                  (channel_id, name), 'recommanded.png', 'DefaultMovies.png')
 
         self.endDirectory()
 
@@ -63,14 +64,15 @@ class Channel(object):
             show_notification(name, 'Unsubscribe successfully')
 
     def addDirectoryItem(self, name, query, thumb, icon, isFolder=True):
-        if isinstance(name, int) :
+        if isinstance(name, int):
             name = xbmcaddon.Addon().getLocalizedString(name).encode('utf-8')
         #thumb = os.path.join(artPath, thumb) if not artPath == None else icon
         url = '%s?action=%s' % (sysaddon, query)
         thumb = icon
         item = xbmcgui.ListItem(label=name)
         item.setArt({'icon': thumb, 'thumb': thumb})
-        xbmcplugin.addDirectoryItem(handle=syshandle, url=url, listitem=item, isFolder=isFolder)
+        xbmcplugin.addDirectoryItem(
+            handle=syshandle, url=url, listitem=item, isFolder=isFolder)
 
     def endDirectory(self):
         xbmcplugin.endOfDirectory(syshandle, cacheToDisc=True)

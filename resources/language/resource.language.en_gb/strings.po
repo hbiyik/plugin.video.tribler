@@ -81,7 +81,7 @@ msgid "CONNECTION"
 msgstr ""
 
 msgctxt "#32703"
-msgid "BINDWIDTH"
+msgid "BANDWIDTH"
 msgstr ""
 
 msgctxt "#32704"
@@ -113,15 +113,15 @@ msgid "Always ask download settings"
 msgstr ""
 
 msgctxt "#32715"
-msgid "Default download settings"
+msgid "Default Transfer settings"
 msgstr ""
 
 msgctxt "#32716"
-msgid "Download anonymously using proxies"
+msgid "Download anonymously using encrypted proxies"
 msgstr ""
 
 msgctxt "#32717"
-msgid "Encrpted anonymous seeding using proxies"
+msgid "Upload anonymously using encrypted proxies"
 msgstr ""
 
 msgctxt "#32718"
@@ -285,7 +285,7 @@ msgid "Proxy downloading"
 msgstr ""
 
 msgctxt "#32774"
-msgid "Mode"
+msgid "Download Mode"
 msgstr ""
 
 msgctxt "#32775"
@@ -377,7 +377,7 @@ msgid "seeder"
 msgstr ""
 
 msgctxt "#33105"
-msgid "seeders"
+msgid "upload"
 msgstr ""
 
 msgctxt "#33106"
@@ -385,7 +385,7 @@ msgid "leecher"
 msgstr ""
 
 msgctxt "#33107"
-msgid "leechers"
+msgid "download"
 msgstr ""
 
 msgctxt "#33108"

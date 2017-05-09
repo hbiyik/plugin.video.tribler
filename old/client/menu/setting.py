@@ -1,10 +1,8 @@
-import os,sys,urlparse
-
-import xbmcaddon, xbmcgui, xbmcplugin
-
+import sys
 
 sysaddon = sys.argv[0]
 syshandle = int(sys.argv[1])
+
 
 class settings:
     def openSettings(query=None, id=addonInfo('id')):

@@ -1,64 +1,65 @@
-import xbmc
-import paths
-
-import sys
-import os
-import threading
-
 from twisted.internet import reactor
 
 from Tribler.Core.Modules.process_checker import ProcessChecker
 from Tribler.Core.Session import Session
 from Tribler.Core.SessionConfig import SessionStartupConfig
+import paths
+import xbmc
+import logging
+
+from plugin import defs
+from plugin import log
+from plugin import common
+
+common.cleandata(defs._LOGDIR)
+logger = log.makelogger()
 
 
-class server(threading.Thread):
+class server(object):
+    def __init__(self, stopflag=False):
+        self.flag = stopflag
+        self.logger = logging.getLogger(defs.ADDONNAME)
 
-    def shutdown(self, *_):
-        xbmc.log("Stopping Tribler core")
-        self.session.shutdown()
-        reactor.stop()
-
-    def _start_tribler(self):
+    def startsession(self, port):
         config = SessionStartupConfig().load()
-        config.set_http_api_port(8085)
+        config.set_http_api_port(port)
         config.set_http_api_enabled(True)
-
-        # Check if we are already running a Tribler instance
         process_checker = ProcessChecker()
         if process_checker.already_running:
+            self.logger.debug("Another Tribler Serivce is Running")
+            self.logger.debug("Another Tribler can not start")
             return
+        self.session = Session(config)
+        self.session.start()
+        # s.triblertokodi()
+        self.logger.debug("Started Tribler core")
+        for lname, logger in logging.Logger.manager.loggerDict.iteritems():
+            if isinstance(logger, logging.Logger):
+                common.savelogger(logger, lname)
 
-        session = Session(config)
-        self.session = session
+    def shut(self, block=2):
+        try:
+            mon = xbmc.Monitor()
+            while not mon.abortRequested() or not self.flag:
+                self.logger.debug("Entered Monitor XBMC>13")
+                if mon.waitForAbort(block) or self.flag:
+                    self.logger.debug("Abort Detected XBMC>13")
+                    break
+        except AttributeError:
+            while not (xbmc.abortRequested or self.flag):
+                self.logger.debug("Entered Monitor XBMC<=13")
+                xbmc.sleep(block * 1000)
+            self.logger.debug("Entered Monitor XBMC<=13")
+        self.session.shutdown().addCallback(reactor.stop())
 
-        #signal.signal(signal.SIGTERM, lambda signum, stack: self.shutdown(session, signum, stack))
-        session.start()
-        xbmc.log("Started Tribler core")
-
-    def run(self):
-        xbmc.log("Starting Tribler core")
-        reactor.callWhenRunning(self._start_tribler)
-        reactor.run(installSignalHandlers=0)
-        xbmc.log("Stopped Tribler core")
-
+    def start(self, signals=0):
+        reactor.callInThread(self.shut, defs.MONINTERVAL)
+        self.logger.debug("Starting Tribler core")
+        reactor.callWhenRunning(self.startsession, defs.APIPORT)
+        reactor.run(installSignalHandlers=signals)
+        self.logger.debug("Stopped Tribler core")
 
 if __name__ == '__main__':
-    try:
-        mon = xbmc.Monitor()
-
-        def isaborted(*args, **kwargs):
-            return mon.abortRequested(*args, **kwargs)
-        wait = mon.waitForAbort
-    except AttributeError:
-        def isaborted(*args, **kwargs):
-            return xbmc.abortRequested
-        wait = xbmc.sleep
     core = server()
     core.start()
-
-    while not isaborted():
-        if wait(5):
-            core.shutdown()
-            break
-core.join()
+    logger.debug("Tribler Service HIT EOF")
