@@ -38,7 +38,7 @@ class Contianer(object):
         serial = sys.argv[2][1:]
         try:
             data = json.loads(urllib.unquote_plus(serial))
-        except:
+        except Exception:
             data = {}
         self._items = []
         self._container = data.get("container", self.__class__.__name__)

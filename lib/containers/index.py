@@ -29,10 +29,10 @@ class index(container.Contianer):
                       method="popular"
                       )
         sub = self.item(addon.local(32011),
-                         module="containers.torrents",
-                         container="index",
-                         method="random"
-                         )
+                        module="containers.torrents",
+                        container="index",
+                        method="random"
+                        )
         d.context(sub, True)
         d.dir()
         self.item(addon.local(32002),

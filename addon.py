@@ -24,5 +24,6 @@ class test(gui.form):
         self.prg += 1
         self.set(self._prg, self.prg % 100)
 
+
 test(150, 500, "header")
 index.index()

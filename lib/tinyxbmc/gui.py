@@ -80,7 +80,7 @@ class form(xbmcgui.WindowDialog):
         self.__pady = self.__padx - 10
         self.__elems = {}
         self.__cmap = {}
-        self.__eid = 0 
+        self.__eid = 0
         self.__numbtns = 0
         self.__calls = {
                 "text": ("setLabel", "getLabel", []),
@@ -186,13 +186,14 @@ class form(xbmcgui.WindowDialog):
                     y += self.__rowh + self.__pady
                     self.__numbtns -= numbtns
                     numbtns = 0
-    @staticmethod                
+
+    @staticmethod
     def __null(*args, **kwargs):
         pass
-    
+
     def getelem(self, eid):
         return self.__elems[eid][-1]
-    
+
     def get(self, eid):
         typ, lbl, clck, fcs, elem = self.__elems[eid]
         if typ == "progress":
@@ -212,7 +213,7 @@ class form(xbmcgui.WindowDialog):
     def text(self, label="", value=""):
         elem = xbmcgui.ControlLabel(0, 0, 0, 0, value)
         self.__eid += 1
-        self.__elems[self.__eid] = ("text", label, self.__null, self.__null, elem) 
+        self.__elems[self.__eid] = ("text", label, self.__null, self.__null, elem)
         return self.__eid
 
     def edit(self, label="", default=""):
@@ -256,7 +257,7 @@ class form(xbmcgui.WindowDialog):
 
     def onFocus(self, controlId):
         pass
-    
+
     def onControl(self, ctrl):
         eid = self.__cmap.get(ctrl.getId())
         if eid:

@@ -57,6 +57,7 @@ class setting():
 def local(sid):
     return a.getLocalizedString(sid).encode('utf-8')
 
+
 addonid = a.getAddonInfo('id')
 profile = a.getAddonInfo('profile')
 profile = xbmc.translatePath(profile).decode("utf-8")
@@ -66,6 +67,7 @@ class blockingloop(object):
     def __init__(self, *args, **kwargs):
         self.wait = 0.1
         self.init(*args, **kwargs)
+        self.onstart()
         try:
             mon = xbmc.Monitor()
             while not (mon.abortRequested() or self.isclosed()):
@@ -79,6 +81,9 @@ class blockingloop(object):
         self.onclose()
 
     def init(self, *args, **kwargs):
+        pass
+
+    def onstart(self):
         pass
 
     def onloop(self):

@@ -28,7 +28,7 @@ class index(container.Contianer):
         js = rest.jsquery("torrents", "random")
         for _ in torrent.iterate(self, js.get("torrents")):
             pass
-            #self.addDirectoryItem(name, 'start-download&info-hash=%s&name=%s' %
+            # self.addDirectoryItem(name, 'start-download&info-hash=%s&name=%s' %
             #                      (info_hash, name), 'recommanded.png', 'DefaultMovies.png')
 
     def play(self, ihash, name):

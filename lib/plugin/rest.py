@@ -30,9 +30,9 @@ logger = log.makelogger()
 def jsquery(*paths, **queries):
     path = "/".join(paths)
     url = "%s://%s:%d/%s" % (const.APIPROTO,
-                                const.APIDOMAIN,
-                                const.APIPORT,
-                                path)
+                             const.APIDOMAIN,
+                             const.APIPORT,
+                             path)
     logger.debug("Tribler REST:GET: %s" % url)
     response = requests.request("GET", url, timeout=const.APITIMEOUT, params=queries)
     js = response.json()
@@ -43,9 +43,9 @@ def jsquery(*paths, **queries):
 def jsput(*paths, **query):
     path = "/".join(paths)
     url = "%s://%s:%d/%s" % (const.APIPROTO,
-                            const.APIDOMAIN,
-                            const.APIPORT,
-                            path)
+                             const.APIDOMAIN,
+                             const.APIPORT,
+                             path)
     logger.debug("Tribler REST:PUT: %s: %s" % (url, repr(query)))
     response = requests.request("PUT", url, data=query, timeout=const.APITIMEOUT)
     js = response.json()
@@ -56,9 +56,9 @@ def jsput(*paths, **query):
 def jsdel(*paths, **query):
     path = "/".join(paths)
     url = "%s://%s:%d/%s" % (const.APIPROTO,
-                            const.APIDOMAIN,
-                            const.APIPORT,
-                            path)
+                             const.APIDOMAIN,
+                             const.APIPORT,
+                             path)
     logger.debug("Tribler REST:DEL: %s: %s" % (url, repr(query)))
     response = requests.request("DELETE", url, data=query, timeout=const.APITIMEOUT)
     js = response.json()

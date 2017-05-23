@@ -47,6 +47,6 @@ def savelogger(logger, lname):
 def makelogger():
     logger = logging.getLogger(const.ADDONNAME)
     savelogger(logger, const.ADDONNAME)
-    #sys.stderr = stream_proxy(logger, logging.DEBUG)
-    #sys.stdout = stream_proxy(logger, logging.DEBUG)
+    #  sys.stderr = stream_proxy(logger, logging.DEBUG)
+    #  sys.stdout = stream_proxy(logger, logging.DEBUG)
     return logger
