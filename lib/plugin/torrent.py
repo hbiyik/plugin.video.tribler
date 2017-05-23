@@ -40,7 +40,7 @@ def download(ihash, name):
             "destination": destination,
             "uri": magnet
             }
-    response, js = rest.jspost("downloads", **data)
+    js, response = rest.jsput("downloads", **data)
     status = response.status_code
     if status == 200:
         gui.notify(name, 'Download started')
@@ -120,5 +120,5 @@ class ui(addon.blockingloop):
 
         self.kprogress.update(progress_bar, progress_dis, speed_dis, dest_dis)
 
-    def dobreak(self):
+    def isclosed(self):
         return self.kprogress.iscanceled()

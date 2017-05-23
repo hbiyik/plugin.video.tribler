@@ -35,7 +35,13 @@ class setting():
         return str(a.getSetting(variable).decode(self.e))
 
     def getint(self, variable):
-        return int(a.getSetting(variable))
+        val = a.getSetting(variable)
+        if isinstance(val, (int, float)):
+            return int(val)
+        elif isinstance(val, (str, unicode)) and val.isdigit():
+            return int(val)
+        else:
+            return -1
 
     def getfloat(self, variable):
         return float(a.getSetting(variable))
@@ -62,16 +68,15 @@ class blockingloop(object):
         self.init(*args, **kwargs)
         try:
             mon = xbmc.Monitor()
-            while not (mon.abortRequested() or self.dobreak()):
+            while not (mon.abortRequested() or self.isclosed()):
                 self.onloop()
-                if mon.waitForAbort(self.wait) or self.dobreak():
+                if mon.waitForAbort(self.wait) or self.isclosed():
                     break
-            self.onbreak()
         except AttributeError:
-            while not (xbmc.abortRequested or self.dobreak()):
+            while not (xbmc.abortRequested or self.isclosed()):
                 self.onloop()
                 xbmc.sleep(self.wait * 1000)
-            self.onbreak()
+        self.onclose()
 
     def init(self, *args, **kwargs):
         pass
@@ -79,8 +84,8 @@ class blockingloop(object):
     def onloop(self):
         pass
 
-    def onbreak(self):
+    def onclose(self):
         pass
 
-    def dobreak(self):
+    def isclosed(self):
         return False

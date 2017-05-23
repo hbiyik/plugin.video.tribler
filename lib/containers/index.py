@@ -35,7 +35,10 @@ class index(container.Contianer):
                          )
         d.context(sub, True)
         d.dir()
-        self.item(addon.local(32002), container="discovered").dir()
+        self.item(addon.local(32002),
+                  module="containers.channels",
+                  container="index",
+                  method="discovered").dir()
         self.item(addon.local(32003), method="mychannel").dir()
         self.item(addon.local(32004), container="subscriptions", module="containers.channels").dir()
         d = self.item(addon.local(32005), module="containers.downloads", container="index", method="show")

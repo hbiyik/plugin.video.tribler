@@ -40,14 +40,27 @@ def jsquery(*paths, **queries):
     return js
 
 
-def jspost(*paths, **query):
+def jsput(*paths, **query):
     path = "/".join(paths)
     url = "%s://%s:%d/%s" % (const.APIPROTO,
-                                const.APIDOMAIN,
-                                const.APIPORT,
-                                path)
+                            const.APIDOMAIN,
+                            const.APIPORT,
+                            path)
     logger.debug("Tribler REST:PUT: %s: %s" % (url, repr(query)))
     response = requests.request("PUT", url, data=query, timeout=const.APITIMEOUT)
     js = response.json()
     logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
-    return response, js
+    return js, response
+
+
+def jsdel(*paths, **query):
+    path = "/".join(paths)
+    url = "%s://%s:%d/%s" % (const.APIPROTO,
+                            const.APIDOMAIN,
+                            const.APIPORT,
+                            path)
+    logger.debug("Tribler REST:DEL: %s: %s" % (url, repr(query)))
+    response = requests.request("DELETE", url, data=query, timeout=const.APITIMEOUT)
+    js = response.json()
+    logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
+    return js, response
