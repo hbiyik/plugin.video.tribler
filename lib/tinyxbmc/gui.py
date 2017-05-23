@@ -71,23 +71,26 @@ class form(xbmcgui.WindowDialog):
         xbmcgui.WindowDialog.__init__(self)
         self.setCoordinateResolution(0)
         #  1920x1080
-        self._cw = 1920
-        self._ch = 1080
-        self._w1 = w1
-        self._w2 = w2
-        self._padx = 25
-        self._texth = 43  # changes depending on the selected skin :(
-        self._pady = self._padx - 10
-        self._elems = []
-        self._numbtns = 0
-        self.init()
+        self.__cw = 1920
+        self.__ch = 1080
+        self.__w1 = w1
+        self.__w2 = w2
+        self.__padx = 25
+        self.__rowh = 43  # changes depending on the selected skin :(
+        self.__pady = self.__padx - 10
+        self.__elems = {}
+        self.__cmap = {}
+        self.__eid = 0 
+        self.__numbtns = 0
         self.__calls = {
                 "text": ("setLabel", "getLabel", []),
                 "edit": ("setText", "getText", []),
                 "bool": ("setSelected", "getSelected", []),
                 "button": ("setLabel", "getLabel", []),
                 }
+        self.init()
         self.__terminate = False
+        self.__pre = None
         self.__create(header)
         self.show()
         #  prevent kodi gc to work properly using singular inheritance
@@ -96,143 +99,153 @@ class form(xbmcgui.WindowDialog):
         addon.blockingloop.onloop = self.onloop
         addon.blockingloop()
 
-    def __pos(self, name, x, y, w, h, suffix=""):
-        elem = getattr(self, "_control%s_%s" % (suffix, name))
+    def __pos(self, eid, x, y, w, h):
+        elem = self.getelem(eid)
         elem.setPosition(x, y)
         elem.setWidth(w)
         elem.setHeight(h)
+        self.addControl(elem)
+        self.__cmap[elem.getId()] = eid
+        if self.__pre:
+            self.__pre.controlDown(elem)
+            self.__pre.controlRight(elem)
+            elem.controlUp(self.__pre)
+            elem.controlLeft(self.__pre)
+        else:
+            self.setFocus(elem)
+        self.__pre = elem
         return elem
 
-    def __row(self, rx, y, name, rlabel, **kwargs):
-        self.addControl(xbmcgui.ControlLabel(rx, y, self._w1, self._texth,
-                                             rlabel))
-        self.addControl(self.__pos(name, rx + self._w1, y, self._w2,
-                                   self._texth))
-        return y + self._texth + self._pady
+    def __row(self, eid, rx, y, label):
+        self.addControl(xbmcgui.ControlLabel(rx, y, self.__w1, self.__rowh,
+                                             label))
+        self.__pos(eid, rx + self.__w1, y, self.__w2, self.__rowh)
+        return y + self.__rowh + self.__pady
 
     def __create(self, header):
         h = 0
-        w = self._w1 + self._w2
-        bw = minbuttonw = (w - self._padx * 2) / 3
-        for elem in self._elems:
+        w = self.__w1 + self.__w2
+        bw = minbuttonw = (w - self.__padx * 2) / 3
+        for eid, elem in self.__elems.iteritems():
             if not elem[0] == "button":
-                h += self._texth + self._pady
+                h += self.__rowh + self.__pady
         bsize = int(w / minbuttonw)
-        h += int(math.ceil(float(self._numbtns) / bsize) *
-                 (self._texth + self._pady))  # ;) math porn
-        h -= self._pady
-        x = rx = (self._cw - w) / 2
-        y = ry = (self._ch - h) / 2
+        h += int(math.ceil(float(self.__numbtns) / bsize) *
+                 (self.__rowh + self.__pady))  # ;) math porn
+        h -= self.__pady
+        x = rx = (self.__cw - w) / 2
+        y = ry = (self.__ch - h) / 2
         self.addControl(xbmcgui.ControlImage(
-                                             rx - self._padx,
-                                             ry - self._pady - self._texth,
-                                             w + 2 * self._padx,
-                                             self._texth,
+                                             rx - self.__padx,
+                                             ry - self.__pady - self.__rowh,
+                                             w + 2 * self.__padx,
+                                             self.__rowh,
                                              _red
                                              )
                         )
         self.addControl(xbmcgui.ControlLabel(
                                              rx,
-                                             ry - self._pady - self._texth,
-                                             w + 2 * self._padx,
-                                             self._texth,
+                                             ry - self.__pady - self.__rowh,
+                                             w + 2 * self.__padx,
+                                             self.__rowh,
                                              header,
                                              )
                         )
         self.addControl(xbmcgui.ControlImage(
-                                             rx - self._padx,
-                                             ry - self._pady,
-                                             w + 2 * self._padx,
-                                             h + 2 * self._pady,
+                                             rx - self.__padx,
+                                             ry - self.__pady,
+                                             w + 2 * self.__padx,
+                                             h + 2 * self.__pady,
                                              _black
                                              )
                         )
 
-        for typ, name, label, kwargs in self._elems:
-            kwargs["label"] = label
+        for eid, (typ, label, clck, fcs, elem) in self.__elems.iteritems():
             if typ == "edit":
-                y = self.__row(rx, y, name, label, **kwargs)
+                y = self.__row(eid, rx, y, label)
             if typ == "text":
-                y = self.__row(rx, y, name, label, **kwargs)
+                y = self.__row(eid, rx, y, label)
             if typ == "bool":
-                y = self.__row(rx, y, name, label, **kwargs)
+                y = self.__row(eid, rx, y, label)
             if typ == "progress":
-                self.addControl(self.__pos(name, rx, y, w, self._texth, "bg"))
-                self.addControl(self.__pos(name, rx, y, 0, self._texth))
-                y += self._texth + self._pady
+                self.addControl(xbmcgui.ControlImage(rx, y, w, self.__rowh, _gray))
+                self.__pos(eid, rx, y, 0, self.__rowh)
+                y += self.__rowh + self.__pady
         numbtns = 0
-        for typ, name, label, onclick in self._elems:
+        for eid, (typ, label, clck, fcs, elem) in self.__elems.iteritems():
             if typ == "button":
-                if minbuttonw * self._numbtns + self._padx * (self._numbtns - 1) < w:
-                    bw = (w - (self._numbtns - 1) * self._padx) / self._numbtns
+                if minbuttonw * self.__numbtns + self.__padx * (self.__numbtns - 1) < w:
+                    bw = (w - (self.__numbtns - 1) * self.__padx) / self.__numbtns
                 else:
-                    bw = (w - (bsize - 1) * self._padx) / bsize
-                self.addControl(self.__pos(name, x, y, bw, self._texth))
-                x += bw + self._padx
+                    bw = (w - (bsize - 1) * self.__padx) / bsize
+                self.__pos(eid, x, y, bw, self.__rowh)
+                x += bw + self.__padx
                 numbtns += 1
                 if x + minbuttonw > rx + w:
                     x = rx
-                    y += self._texth + self._pady
-                    self._numbtns -= numbtns
+                    y += self.__rowh + self.__pady
+                    self.__numbtns -= numbtns
                     numbtns = 0
-
-    def get(self, name):
-        for typ, ename, label, kwargs in self._elems:
-            if name == ename:
-                break
-        elem = getattr(self, "_control_%s" % name)
+    @staticmethod                
+    def __null(*args, **kwargs):
+        pass
+    
+    def getelem(self, eid):
+        return self.__elems[eid][-1]
+    
+    def get(self, eid):
+        typ, lbl, clck, fcs, elem = self.__elems[eid]
         if typ == "progress":
-            return elem.getWidth() * 100 / (self._w1 + self._w2)
+            return elem.getWidth() * 100 / (self.__w1 + self.__w2)
         else:
             setter, getter, args = self.__calls[typ]
             return getattr(elem, getter)(*args)
 
-    def set(self, name, value):
-        for typ, ename, label, kwargs in self._elems:
-            if name == ename:
-                break
-        elem = getattr(self, "_control_%s" % name)
+    def set(self, eid, value):
+        typ, lbl, clck, fcs, elem = self.__elems[eid]
         if typ == "progress":
-            elem.setWidth(value * (self._w1 + self._w2) / 100)
+            elem.setWidth(value * (self.__w1 + self.__w2) / 100)
         else:
             setter, getter, args = self.__calls[typ]
             getattr(elem, setter)(value)
 
-    def text(self, name, label):
-        elem = xbmcgui.ControlLabel(0, 0, 0, 0, "")
-        setattr(self, "_control_%s" % name, elem)
-        self._elems.append(("text", name, label, {}))
-        return elem
+    def text(self, label="", value=""):
+        elem = xbmcgui.ControlLabel(0, 0, 0, 0, value)
+        self.__eid += 1
+        self.__elems[self.__eid] = ("text", label, self.__null, self.__null, elem) 
+        return self.__eid
 
-    def edit(self, name, label):
-        elem = xbmcgui.ControlEdit(0, 0, 0, 0, "")
-        setattr(self, "_control_%s" % name, elem)
-        self._elems.append(("edit", name, label, {}))
-        return elem
+    def edit(self, label="", default=""):
+        elem = xbmcgui.ControlEdit(0, 0, 0, 0, default)
+        self.__eid += 1
+        self.__elems[self.__eid] = ("edit", label, self.__null, self.__null, elem)
+        return self.__eid
 
-    def bool(self, name, label):
+    def bool(self, label="", onclick=None):
+        if not onclick:
+            onclick = self.__null
         elem = xbmcgui.ControlCheckMark(0, 0, 0, 0, "",
                                         focusTexture=_red,
                                         noFocusTexture=_white
                                         )
-        setattr(self, "_control_%s" % name, elem)
-        self._elems.append(("bool", name, label, {}))
-        return elem
+        self.__eid += 1
+        self.__elems[self.__eid] = ("bool", label, onclick, self.__null, elem)
+        return self.__eid
 
-    def button(self, name, label, onclick):
+    def button(self, label="", onclick=None):
+        if not onclick:
+            onclick = self.__null
         elem = xbmcgui.ControlButton(0, 0, 0, 0, label)
-        setattr(self, "_control_%s" % name, elem)
-        self._elems.append(("button", name, label, {"onclick": onclick}))
-        self._numbtns += 1
-        return elem
+        self.__eid += 1
+        self.__elems[self.__eid] = ("button", label, onclick, self.__null, elem)
+        self.__numbtns += 1
+        return self.__eid
 
-    def progress(self, name, label):
+    def progress(self, label=""):
         elem = xbmcgui.ControlImage(0, 0, 0, 0, _white)
-        elembg = xbmcgui.ControlImage(0, 0, 0, 0, _gray)
-        setattr(self, "_control_%s" % name, elem)
-        setattr(self, "_controlbg_%s" % name, elembg)
-        self._elems.append(("progress", name, label, {}))
-        return elem
+        self.__eid += 1
+        self.__elems[self.__eid] = ("progress", label, self.__null, self.__null, elem)
+        return self.__eid
 
     def onAction(self, action):
         if action in [
@@ -241,15 +254,14 @@ class form(xbmcgui.WindowDialog):
                       ]:
             self.onclose()
 
-    def onClick(self, controlId):
-        print 7777777
-        print xbmcgui.WindowDialog.onClick(self, controlId)
-        print controlId
-
     def onFocus(self, controlId):
-        print 66666666
-        print xbmcgui.WindowDialog.onFocus(self, controlId)
-        print controlId
+        pass
+    
+    def onControl(self, ctrl):
+        eid = self.__cmap.get(ctrl.getId())
+        if eid:
+            typ, lbl, clck, fcs, elem = self.__elems[eid]
+            clck()
 
     def isclosed(self):
         return self.__terminate
