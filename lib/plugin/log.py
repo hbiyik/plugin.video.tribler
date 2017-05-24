@@ -17,7 +17,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
-import logging
+import logging.handlers
 from plugin import const
 import os
 
@@ -37,7 +37,8 @@ class stream_proxy(object):
 
 def savelogger(logger, lname):
     if isinstance(logger, logging.Logger):
-        logfh = logging.FileHandler(os.path.join(const.LOGDIR, lname + ".log"))
+        lf = os.path.join(const.LOGDIR, lname + ".log")
+        logfh = logging.handlers.RotatingFileHandler(lf, maxBytes=5000, encoding="utf-8")
         logfh.setLevel(const.LOGLVL)
         logfh.setFormatter(const.LOGFM)
         logger.addHandler(logfh)

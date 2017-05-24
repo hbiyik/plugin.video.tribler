@@ -20,6 +20,8 @@
 from tinyxbmc import container
 from tinyxbmc import addon
 
+from plugin import setting
+
 
 class index(container.Contianer):
     def index(self):
@@ -59,3 +61,8 @@ class index(container.Contianer):
 
     def mychannel(self):
         pass
+
+    def ondispatch(self):
+        if addon.setting.ischanged():
+            s = setting.Setting()
+            s.plugintotribler()

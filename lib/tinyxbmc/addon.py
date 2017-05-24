@@ -20,13 +20,37 @@
 
 import xbmcaddon
 import xbmc
+import os
 
 a = xbmcaddon.Addon()
+addonid = a.getAddonInfo('id')
+profile = a.getAddonInfo('profile')
+profile = xbmc.translatePath(profile).decode("utf-8")
 
 
 class setting():
     def __init__(self):
         self.e = "utf-8"
+
+    @staticmethod
+    def ischanged():
+        f = os.path.join(profile, "settings.xml")
+        if os.path.exists(f):
+            cur_s = str(os.path.getsize(f))
+        else:
+            cur_s = "-1"
+        f = os.path.join(profile, "settings.size")
+        if os.path.exists(f):
+            with open(f, "r") as sfile:
+                pre_s = sfile.read()
+        else:
+            pre_s = "-1"
+        if cur_s == pre_s:
+            return False
+        else:
+            with open(f, "w") as sfile:
+                sfile.write(cur_s)
+            return True
 
     def getbool(self, variable):
         return bool(a.getSetting(variable) == 'true')
@@ -56,11 +80,6 @@ class setting():
 
 def local(sid):
     return a.getLocalizedString(sid).encode('utf-8')
-
-
-addonid = a.getAddonInfo('id')
-profile = a.getAddonInfo('profile')
-profile = xbmc.translatePath(profile).decode("utf-8")
 
 
 class blockingloop(object):

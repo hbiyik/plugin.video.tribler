@@ -35,7 +35,8 @@ class Setting(object):
         self.seeding_hour = s.getint('seeding.hour')
         self.seeding_minute = s.getint('seeding.min')
 
-    def triblertokodi(self):
+    @staticmethod
+    def triblertokodi():
         settings_data = rest.jsquery("settings").get("settings")
         seeding_modes = {
                          'forever': 0,
@@ -124,7 +125,7 @@ class Setting(object):
             60 + self.seeding_minute
 
         settings_data['tunnel_community']['exitnode_enabled'] = self.exitnode
-        settings_data['Tribler']['default_number_hops'] = self.default_hop
+        settings_data['Tribler']['default_number_hops'] = self.anond
         settings_data['multichain']['enabled'] = self.multichain
 
-        rest.jspost("settings", settings_data)
+        rest.jspost("settings", **settings_data)

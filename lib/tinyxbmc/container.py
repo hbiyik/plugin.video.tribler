@@ -49,6 +49,7 @@ class Contianer(object):
         self._disp_container = self._container
         self._disp_module = self._module
         self._disp_method = self._method
+        self.ondispatch()
         if self._disp_module == self.__class__.__module__:
             if self._disp_container == self.__class__.__name__:
                 self._container = self
@@ -106,6 +107,9 @@ class Contianer(object):
     def index(self, *args, **kwargs):
         item = self.dir("Hello TinyXBMC")
         item.call()
+        pass
+
+    def ondispatch(self):
         pass
 
 

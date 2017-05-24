@@ -47,7 +47,20 @@ def jsput(*paths, **query):
                              const.APIPORT,
                              path)
     logger.debug("Tribler REST:PUT: %s: %s" % (url, repr(query)))
-    response = requests.request("PUT", url, data=query, timeout=const.APITIMEOUT)
+    response = requests.request("PUT", url, json=query, timeout=const.APITIMEOUT)
+    js = response.json()
+    logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
+    return js, response
+
+
+def jspost(*paths, **query):
+    path = "/".join(paths)
+    url = "%s://%s:%d/%s" % (const.APIPROTO,
+                             const.APIDOMAIN,
+                             const.APIPORT,
+                             path)
+    logger.debug("Tribler REST:POST: %s: %s" % (url, repr(query)))
+    response = requests.request("POST", url, json=query, timeout=const.APITIMEOUT)
     js = response.json()
     logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
     return js, response
@@ -60,7 +73,7 @@ def jsdel(*paths, **query):
                              const.APIPORT,
                              path)
     logger.debug("Tribler REST:DEL: %s: %s" % (url, repr(query)))
-    response = requests.request("DELETE", url, data=query, timeout=const.APITIMEOUT)
+    response = requests.request("DELETE", url, json=query, timeout=const.APITIMEOUT)
     js = response.json()
     logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
     return js, response

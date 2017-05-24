@@ -3,17 +3,21 @@ from twisted.internet import reactor
 from Tribler.Core.Modules.process_checker import ProcessChecker
 from Tribler.Core.Session import Session
 from Tribler.Core.SessionConfig import SessionStartupConfig
+from Tribler.Core.simpledefs import NTFY_STARTED, NTFY_TRIBLER
 import paths
 import logging
 
 from plugin import const
 from plugin import log
 from plugin import util
+from plugin import setting
 
 from tinyxbmc import addon
 
 util.cleandata(const._LOGDIR)
 logger = log.makelogger()
+
+global logger
 
 
 class monitor(addon.blockingloop):
@@ -21,19 +25,17 @@ class monitor(addon.blockingloop):
         self.session = session
         self.wait = wait
 
+    def shut(self, *args, **kwargs):
+        reactor.stop()
+
     def onclose(self):
-        self.session.shutdown().addCallback(reactor.stop)
+        self.session.shutdown().addCallback(self.shut)
 
 
 class server(object):
     def __init__(self, port):
-        reactor.callInThread(monitor, self.session, const.MONINTERVAL)
-        logger.debug("Starting Tribler core")
-        reactor.callWhenRunning(self.start, port)
-        reactor.run(installSignalHandlers=0)
-        logger.debug("Stopped Tribler core")
-
-    def start(self, port):
+        global logger
+        self.logger = logger
         config = SessionStartupConfig().load()
         config.set_http_api_port(port)
         config.set_http_api_enabled(True)
@@ -43,9 +45,19 @@ class server(object):
             logger.debug("Tribler can not start")
             return
         self.session = Session(config)
+        reactor.callInThread(monitor, self.session, const.MONINTERVAL)
+        logger.debug("Starting Tribler core")
+        reactor.callWhenRunning(self.start, port)
+        reactor.run(installSignalHandlers=0)
+        logger.debug("Stopped Tribler core")
+
+    def onstart(self, subject, changetype, objectID, *args):
+        self.logger.debug("Started Tribler core")
+        setting.Setting.triblertokodi()
+
+    def start(self, port):
         self.session.start()
-        # s.triblertokodi()
-        logger.debug("Started Tribler core")
+        self.session.add_observer(self.onstart, NTFY_TRIBLER, [NTFY_STARTED])
         for lname, logger in logging.Logger.manager.loggerDict.iteritems():
             if isinstance(logger, logging.Logger):
                 log.savelogger(logger, lname)

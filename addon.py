@@ -1,6 +1,7 @@
 import paths
 from containers import index
 from tinyxbmc import gui
+from tinyxbmc import addon
 
 
 class test(gui.form):
