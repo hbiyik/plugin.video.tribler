@@ -1,5 +1,6 @@
 from plugin import rest
 from tinyxbmc import addon
+from tinyxbmc import gui
 
 s = addon.setting()
 
@@ -36,8 +37,7 @@ class Setting(object):
         self.seeding_minute = s.getint('seeding.min')
 
     @staticmethod
-    def triblertokodi():
-        settings_data = rest.jsquery("settings").get("settings")
+    def coretokodi(settings_data):
         seeding_modes = {
                          'forever': 0,
                          'time': 1,
@@ -76,6 +76,11 @@ class Setting(object):
         s.set('anony.exitnode', settings_data['tunnel_community']['exitnode_enabled'])
         s.set('proxydl.speed', settings_data['Tribler']['default_number_hops'] - 1)
         s.set('multichain.enable', settings_data['multichain']['enabled'])
+
+    @staticmethod
+    def triblertokodi():
+        settings_data = rest.jsget("settings", requests={"timeout": 60})[0].get("settings")
+        Setting.coretokodi(settings_data)
 
     def plugintotribler(self):
         settings_data = {

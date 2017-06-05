@@ -29,7 +29,7 @@ class index(container.Contianer):
         self.autoupdate = const.CONTAINERINTERVAL
 
     def show(self, *states, **kwargs):
-        js = rest.jsquery("downloads", get_peers=1, get_pieces=1).get("downloads")
+        js = rest.jsget("downloads", get_peers=1, get_pieces=1)[0].get("downloads")
         for d, tinfo in torrent.iterate(self, js):
             tstatus = tinfo.get("status")
             if tstatus in states and not kwargs.get("revert", False):

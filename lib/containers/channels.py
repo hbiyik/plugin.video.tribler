@@ -63,21 +63,21 @@ class index(container.Contianer):
         self._update(0)
 
     def subbed(self):
-        js = rest.jsquery("channels", "subscribed")
+        js = rest.jsget("channels", "subscribed")[0]
         for d, cinfo in self.iterate(js.get("subscribed", [])):
             d.dir(cinfo.get('dispersy_cid'), cinfo.get("name"))
 
     def popular(self):
-        js = rest.jsquery("channels", "popular")
+        js = rest.jsget("channels", "popular")[0]
         for d, cinfo in self.iterate(js.get("channels", [])):
             d.dir(cinfo.get('dispersy_cid'), cinfo.get("name"))
 
     def discovered(self):
-        js = rest.jsquery("channels", "discovered")
+        js = rest.jsget("channels", "discovered")[0]
         for d, cinfo in self.iterate(js.get("channels", [])):
             d.dir(cinfo.get('dispersy_cid'), cinfo.get("name"))
 
     def show(self, channel_id, cname):
-        js = rest.jsquery("channels", "discovered", channel_id, "torrents")
+        js = rest.jsget("channels", "discovered", channel_id, "torrents")[0]
         for _ in torrent.iterate(self, js.get("torrents", [])):
             pass

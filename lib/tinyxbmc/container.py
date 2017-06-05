@@ -147,12 +147,15 @@ class itemfactory(object):
         self._cntx._container._items.append([url, self.item, isFolder])
 
     def dir(self, *args, **kwargs):
+        #  item is added to container as a navigatable folder (isFolder=True)
         self._dir(True, *args, **kwargs)
 
     def call(self, *args, **kwargs):
+        #  item is added to container as a callable folder (isFolder=False)
         self._dir(False, *args, **kwargs)
 
     def run(self, *args, **kwargs):
+        #  item is not added to container but called on runtime
         url = self.dourl(*args, **kwargs)
         xbmc.executebuiltin('RunPlugin(%s)' % url)
 
@@ -160,6 +163,6 @@ class itemfactory(object):
         url = sub.dourl(*args, **kwargs)
         sub.item.addContextMenuItems(sub._contexts)  # nested fun :)
         if isdir:
-            self._contexts.append([sub.name, 'RunPlugin(%s)' % url])
-        else:
             self._contexts.append([sub.name, 'Container.Update(%s)' % url])
+        else:
+            self._contexts.append([sub.name, 'RunPlugin(%s)' % url])

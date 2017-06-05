@@ -66,10 +66,11 @@ def progress(name):
     return dialog
 
 
-class form(xbmcgui.WindowDialog):
-    def __init__(self, w1, w2, header=""):
+class form(xbmcgui.WindowDialog, addon.blockingloop):
+    def __init__(self, w1, w2, header="", *args, **kwargs):
         xbmcgui.WindowDialog.__init__(self)
         self.setCoordinateResolution(0)
+        self.wait = 0.1
         #  1920x1080
         self.__cw = 1920
         self.__ch = 1080
@@ -83,27 +84,33 @@ class form(xbmcgui.WindowDialog):
         self.__eid = 0
         self.__numbtns = 0
         self.__calls = {
-                "text": ("setLabel", "getLabel", []),
+                "label": ("setLabel", "getLabel", []),
                 "edit": ("setText", "getText", []),
+                "text": ("setText", "reset", []),
                 "bool": ("setSelected", "getSelected", []),
                 "button": ("setLabel", "getLabel", []),
                 }
-        self.init()
-        self.__terminate = False
+        self.init(*args, **kwargs)
+        self.terminate = False
         self.__pre = None
         self.__create(header)
         self.show()
-        #  prevent kodi gc to work properly using singular inheritance
-        addon.blockingloop.isclosed = self.isclosed
-        addon.blockingloop.onclose = self.onclose
-        addon.blockingloop.onloop = self.onloop
-        addon.blockingloop()
+        self.oninit()
+        self.block(self.wait, self.onloop, self.terminate)
+
+    class block(addon.blockingloop):
+        def init(self, wait, onloop, terminate):
+            self.wait = wait
+            self.onloop = onloop
+            self.terminate = terminate
 
     def __pos(self, eid, x, y, w, h):
         elem = self.getelem(eid)
         elem.setPosition(x, y)
         elem.setWidth(w)
         elem.setHeight(h)
+        elem.setVisible(True)
+        elem.setEnabled(True)
         self.addControl(elem)
         self.__cmap[elem.getId()] = eid
         if self.__pre:
@@ -116,11 +123,11 @@ class form(xbmcgui.WindowDialog):
         self.__pre = elem
         return elem
 
-    def __row(self, eid, rx, y, label):
-        self.addControl(xbmcgui.ControlLabel(rx, y, self.__w1, self.__rowh,
+    def __row(self, eid, rx, y, rh, label):
+        self.addControl(xbmcgui.ControlLabel(rx, y, self.__w1, rh,
                                              label))
-        self.__pos(eid, rx + self.__w1, y, self.__w2, self.__rowh)
-        return y + self.__rowh + self.__pady
+        self.__pos(eid, rx + self.__w1, y, self.__w2, rh)
+        return y + rh + self.__pady
 
     def __create(self, header):
         h = 0
@@ -128,7 +135,7 @@ class form(xbmcgui.WindowDialog):
         bw = minbuttonw = (w - self.__padx * 2) / 3
         for eid, elem in self.__elems.iteritems():
             if not elem[0] == "button":
-                h += self.__rowh + self.__pady
+                h += elem[-2] + self.__pady
         bsize = int(w / minbuttonw)
         h += int(math.ceil(float(self.__numbtns) / bsize) *
                  (self.__rowh + self.__pady))  # ;) math porn
@@ -160,25 +167,23 @@ class form(xbmcgui.WindowDialog):
                                              )
                         )
 
-        for eid, (typ, label, clck, fcs, elem) in self.__elems.iteritems():
-            if typ == "edit":
-                y = self.__row(eid, rx, y, label)
-            if typ == "text":
-                y = self.__row(eid, rx, y, label)
-            if typ == "bool":
-                y = self.__row(eid, rx, y, label)
+        for eid, (typ, label, clck, fcs, rh, elem) in self.__elems.iteritems():
+            if typ in ["label", "edit", "text"]:
+                y = self.__row(eid, rx, y, rh, label)
             if typ == "progress":
-                self.addControl(xbmcgui.ControlImage(rx, y, w, self.__rowh, _gray))
-                self.__pos(eid, rx, y, 0, self.__rowh)
+                self.addControl(xbmcgui.ControlImage(rx, y, w, rh, _gray))
+                self.__pos(eid, rx, y, 0, rh)
                 y += self.__rowh + self.__pady
+            if typ == "text" and False:
+                elem.autoScroll(1, 1000, 1)
         numbtns = 0
-        for eid, (typ, label, clck, fcs, elem) in self.__elems.iteritems():
+        for eid, (typ, label, clck, fcs, rh, elem) in self.__elems.iteritems():
             if typ == "button":
                 if minbuttonw * self.__numbtns + self.__padx * (self.__numbtns - 1) < w:
                     bw = (w - (self.__numbtns - 1) * self.__padx) / self.__numbtns
                 else:
                     bw = (w - (bsize - 1) * self.__padx) / bsize
-                self.__pos(eid, x, y, bw, self.__rowh)
+                self.__pos(eid, x, y, bw, rh)
                 x += bw + self.__padx
                 numbtns += 1
                 if x + minbuttonw > rx + w:
@@ -194,8 +199,18 @@ class form(xbmcgui.WindowDialog):
     def getelem(self, eid):
         return self.__elems[eid][-1]
 
+    def enable(self, eid):
+        typ, lbl, clck, fcs, h, elem = self.__elems[eid]
+        if not typ == "progress":
+            elem.setEnabled(True)
+
+    def disable(self, eid):
+        typ, lbl, clck, fcs, h, elem = self.__elems[eid]
+        if not typ == "progress":
+            elem.setEnabled(False)
+
     def get(self, eid):
-        typ, lbl, clck, fcs, elem = self.__elems[eid]
+        typ, lbl, clck, fcs, h, elem = self.__elems[eid]
         if typ == "progress":
             return elem.getWidth() * 100 / (self.__w1 + self.__w2)
         else:
@@ -203,26 +218,72 @@ class form(xbmcgui.WindowDialog):
             return getattr(elem, getter)(*args)
 
     def set(self, eid, value):
-        typ, lbl, clck, fcs, elem = self.__elems[eid]
+        typ, lbl, clck, fcs, h, elem = self.__elems[eid]
         if typ == "progress":
-            elem.setWidth(value * (self.__w1 + self.__w2) / 100)
+            if value > 100:
+                value = 100
+            elem.setWidth(int(value * (self.__w1 + self.__w2) / 100))
         else:
             setter, getter, args = self.__calls[typ]
             getattr(elem, setter)(value)
 
-    def text(self, label="", value=""):
+    def text(self, label="", height=None):
+        if not height:
+            height = self.__rowh
+        elem = xbmcgui.ControlTextBox(0, 0, 0, 0)
+        self.__eid += 1
+        self.__elems[self.__eid] = ("text",
+                                    label,
+                                    self.__null,
+                                    self.__null,
+                                    height,
+                                    elem)
+        return self.__eid
+
+    def list(self, label="", values=[], height=None):
+        if not height:
+            height = self.__rowh
+        elem = xbmcgui.ControlList(0, 0, 0, 0)
+        for value in values:
+            elem.addItem(value)
+        self.__eid += 1
+        self.__elems[self.__eid] = ("list",
+                                    label,
+                                    self.__null,
+                                    self.__null,
+                                    height,
+                                    elem)
+        return self.__eid
+
+    def label(self, label="", value="", height=None):
+        if not height:
+            height = self.__rowh
         elem = xbmcgui.ControlLabel(0, 0, 0, 0, value)
         self.__eid += 1
-        self.__elems[self.__eid] = ("text", label, self.__null, self.__null, elem)
+        self.__elems[self.__eid] = ("label",
+                                    label,
+                                    self.__null,
+                                    self.__null,
+                                    height,
+                                    elem)
         return self.__eid
 
-    def edit(self, label="", default=""):
+    def edit(self, label="", default="", height=None):
+        if not height:
+            height = self.__rowh
         elem = xbmcgui.ControlEdit(0, 0, 0, 0, default)
         self.__eid += 1
-        self.__elems[self.__eid] = ("edit", label, self.__null, self.__null, elem)
+        self.__elems[self.__eid] = ("edit",
+                                    label,
+                                    self.__null,
+                                    self.__null,
+                                    height,
+                                    elem)
         return self.__eid
 
-    def bool(self, label="", onclick=None):
+    def bool(self, label="", onclick=None, height=None):
+        if not height:
+            height = self.__rowh
         if not onclick:
             onclick = self.__null
         elem = xbmcgui.ControlCheckMark(0, 0, 0, 0, "",
@@ -230,7 +291,12 @@ class form(xbmcgui.WindowDialog):
                                         noFocusTexture=_white
                                         )
         self.__eid += 1
-        self.__elems[self.__eid] = ("bool", label, onclick, self.__null, elem)
+        self.__elems[self.__eid] = ("bool",
+                                    label,
+                                    onclick,
+                                    self.__null,
+                                    height,
+                                    elem)
         return self.__eid
 
     def button(self, label="", onclick=None):
@@ -238,14 +304,26 @@ class form(xbmcgui.WindowDialog):
             onclick = self.__null
         elem = xbmcgui.ControlButton(0, 0, 0, 0, label)
         self.__eid += 1
-        self.__elems[self.__eid] = ("button", label, onclick, self.__null, elem)
+        self.__elems[self.__eid] = ("button",
+                                    label,
+                                    onclick,
+                                    self.__null,
+                                    self.__rowh,
+                                    elem)
         self.__numbtns += 1
         return self.__eid
 
-    def progress(self, label=""):
+    def progress(self, label="", height=None):
+        if not height:
+            height = self.__rowh
         elem = xbmcgui.ControlImage(0, 0, 0, 0, _white)
         self.__eid += 1
-        self.__elems[self.__eid] = ("progress", label, self.__null, self.__null, elem)
+        self.__elems[self.__eid] = ("progress",
+                                    label,
+                                    self.__null,
+                                    self.__null,
+                                    height,
+                                    elem)
         return self.__eid
 
     def onAction(self, action):
@@ -253,7 +331,7 @@ class form(xbmcgui.WindowDialog):
                       xbmcgui.ACTION_PREVIOUS_MENU,
                       xbmcgui.ACTION_NAV_BACK
                       ]:
-            self.onclose()
+            self.close()
 
     def onFocus(self, controlId):
         pass
@@ -261,15 +339,22 @@ class form(xbmcgui.WindowDialog):
     def onControl(self, ctrl):
         eid = self.__cmap.get(ctrl.getId())
         if eid:
-            typ, lbl, clck, fcs, elem = self.__elems[eid]
+            typ, lbl, clck, fcs, h, elem = self.__elems[eid]
             clck()
 
-    def isclosed(self):
-        return self.__terminate
+    def init(self, *args, **kwargs):
+        pass
+
+    def close(self):
+        self.onclose()
+        xbmcgui.WindowDialog.close(self)
+        self.terminate = True
+
+    def oninit(self):
+        pass
 
     def onclose(self):
-        self.close()
-        self.__terminate = True
+        pass
 
     def onloop(self):
         pass

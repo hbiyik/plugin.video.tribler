@@ -25,11 +25,9 @@ from plugin import torrent
 
 class index(container.Contianer):
     def random(self):
-        js = rest.jsquery("torrents", "random")
-        for _ in torrent.iterate(self, js.get("torrents")):
+        js = rest.jsget("torrents", "random")[0]
+        for d, _ in torrent.iterate(self, js.get("torrents")):
             pass
-            # self.addDirectoryItem(name, 'start-download&info-hash=%s&name=%s' %
-            #                      (info_hash, name), 'recommanded.png', 'DefaultMovies.png')
 
     def play(self, ihash, name):
         torrent.download(ihash, name)
@@ -44,4 +42,4 @@ class index(container.Contianer):
         self.view(ihash)
 
     def view(self, ihash):
-        torrent.ui(ihash)
+        torrent.ui(300, 800, "Tribler", ihash)

@@ -27,6 +27,7 @@ APIDOMAIN = "localhost"
 APIPROTO = "http"
 PERPAGE = 9
 APITIMEOUT = 5
+TRACKERTIMEOUT = 3
 LOGLVL = logging.DEBUG
 LOGFM = logging.Formatter('| %(name)s | %(levelname)s | %(asctime)s | %(message)s')
 MONINTERVAL = 2

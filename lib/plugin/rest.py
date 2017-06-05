@@ -27,53 +27,44 @@ import pprint
 logger = log.makelogger()
 
 
-def jsquery(*paths, **queries):
+def _method(method, typ, *paths, **query):
     path = "/".join(paths)
     url = "%s://%s:%d/%s" % (const.APIPROTO,
                              const.APIDOMAIN,
                              const.APIPORT,
                              path)
-    logger.debug("Tribler REST:GET: %s" % url)
-    response = requests.request("GET", url, timeout=const.APITIMEOUT, params=queries)
+    if "requests" in query:
+        extra = query.pop("requests")
+        kwargs = {"timeout": const.APITIMEOUT, typ: query}
+        kwargs.update(extra)
+    else:
+        kwargs = {"timeout": const.APITIMEOUT, typ: query}
+    logger.debug("Tribler REST:%s:%s:%s" % (method, url, repr(kwargs))),
+    try:
+        response = requests.request(method, url, **kwargs)
+    except requests.exceptions.ReadTimeout:
+        return {}, None
     js = response.json()
+    print js
     logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
-    return js
+    return js, response
+
+
+def jsget(*paths, **query):
+    return _method("GET", "params", *paths, **query)
 
 
 def jsput(*paths, **query):
-    path = "/".join(paths)
-    url = "%s://%s:%d/%s" % (const.APIPROTO,
-                             const.APIDOMAIN,
-                             const.APIPORT,
-                             path)
-    logger.debug("Tribler REST:PUT: %s: %s" % (url, repr(query)))
-    response = requests.request("PUT", url, json=query, timeout=const.APITIMEOUT)
-    js = response.json()
-    logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
-    return js, response
+    return _method("PUT", "json", *paths, **query)
 
 
 def jspost(*paths, **query):
-    path = "/".join(paths)
-    url = "%s://%s:%d/%s" % (const.APIPROTO,
-                             const.APIDOMAIN,
-                             const.APIPORT,
-                             path)
-    logger.debug("Tribler REST:POST: %s: %s" % (url, repr(query)))
-    response = requests.request("POST", url, json=query, timeout=const.APITIMEOUT)
-    js = response.json()
-    logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
-    return js, response
+    return _method("POST",  "json", *paths, **query)
 
 
 def jsdel(*paths, **query):
-    path = "/".join(paths)
-    url = "%s://%s:%d/%s" % (const.APIPROTO,
-                             const.APIDOMAIN,
-                             const.APIPORT,
-                             path)
-    logger.debug("Tribler REST:DEL: %s: %s" % (url, repr(query)))
-    response = requests.request("DELETE", url, json=query, timeout=const.APITIMEOUT)
-    js = response.json()
-    logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))
-    return js, response
+    return _method("DELETE", "json", *paths, **query)
+
+
+def jspatch(*paths, **query):
+    return _method("PATCH", "json", *paths, **query)

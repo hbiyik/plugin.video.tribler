@@ -25,20 +25,30 @@ from plugin import const
 from plugin import rest
 from plugin import setting
 
+import time
+
 stng = setting.Setting()
 
 
-def download(ihash, name):
+def magnet(ihash, name=""):
+    return ('magnet:?xt=urn:btih:%s&dn=%s' % (ihash, name)).encode('utf-8')
+
+
+def add_download(ihash, name="", anond=None, anonu=None):
     destination = stng.download_direction
     if stng.ask_download_settings:
         destination = gui.browse(3, addon.local(33008), 'files', '', default=destination)
 
-    magnet = ('magnet:?xt=urn:btih:%s&dn=%s' % (ihash, name)).encode('utf-8')
+    m = magnet(ihash, name)
+    if not anond:
+        anond = stng.anond
+    if not anonu:
+        anonu = stng.anonu
     data = {
-            "anon_hops": stng.anond,
-            "safe_seeding": stng.anonu,
+            "anon_hops": anond,
+            "safe_seeding": anonu,
             "destination": destination,
-            "uri": magnet
+            "uri": m
             }
     js, response = rest.jsput("downloads", **data)
     status = response.status_code
@@ -48,6 +58,44 @@ def download(ihash, name):
         gui.warn(name, 'Download already exists')
     else:
         gui.error('ERROR', 'Failed to start download')
+
+
+def _patch_download(ihash, state=None, files=[], hops=None):
+    data = {}
+    if state:
+        data["state"] = state
+    if len(files):
+        pass
+    if hops:
+        data["anon_hops"] = hops
+    js, response = rest.jspatch("download", ihash, **data)
+    status = response.status_code
+    if status == 200:
+        gui.notify(ihash, 'Download Updated')
+    elif "error" in js:
+        gui.warn(ihash, js["error"])
+    else:
+        gui.error('ERROR', 'Failed to change download')
+
+
+def stop_download(ihash):
+    return _patch_download(ihash, state="stop")
+
+
+def start_download(ihash):
+    return _patch_download(ihash, state="resume")
+
+
+def recheck_download(ihash):
+    return _patch_download(ihash, state="recheck")
+
+
+def set_download_anonimity(ihash, hops=0):
+    return _patch_download(ihash, hops=hops)
+
+
+def remove_download(ihash):
+    pass
 
 
 def iterate(cntx, torrents):
@@ -77,48 +125,196 @@ def iterate(cntx, torrents):
         yield d, tinfo
 
 
-class ui(addon.blockingloop):
+class ui(gui.form):
     def init(self, ihash):
         self.wait = const.UIINTERVAL
-        self.kprogress = gui.progress("UI")  # to-do: make this prettier
         self.ihash = ihash
+        self.state = None
+        self.download = None
+        self.name = self.label("Name", "")
+        self.seeds = self.label(addon.local(33104).title(), "0")
+        self.leechs = self.label(addon.local(33106).title(), "0")
+        self.fs = self.label("Size", "")
+        self.status = self.label("Status")
+        self.btn_stream = self.button("Stream", self.on_btn_stream)
+        self.btn_add = self.button("Add to Downloads", self.on_btn_add)
+        self.btn_download = self.button("Start Download", self.on_btn_download)
+        self.btn_files = self.button("View Files", self.on_btn_files)
+        self.btn_network = self.button("Query Network", self.on_btn_network)
+        self.btn_close = self.button("Close", self.close)
+        self.update_btns()
+
+    def oninit(self):
+        #  self.querydownload()
+        self.set(self.status, "Querying Cache...")
+        self.queryinfo()
+        self.set(self.status, self.info["info"]["status"])
+        self.set(self.name, self.info["info"]["name"])
+        self.set(self.fs, util.humanbyte(self.info["info"]["size"]))
+
+    def update_btns(self):
+        if self.getstate() == 0:
+            self.enable(self.btn_stream)
+            self.set(self.btn_download, "Start Download")
+        elif self.getstate() == 1:
+            self.enable(self.btn_stream)
+            self.set(self.btn_download, "Stop Download")
+        elif self.getstate() == 2:
+            self.disable(self.btn_stream)
+            self.set(self.btn_download, "Stop Streaming")
+
+        if self.isadded():
+            self.enable(self.btn_download)
+            self.enable(self.btn_stream)
+            self.set(self.btn_add, "Remove From Downloads")
+        else:
+            self.disable(self.btn_download)
+            self.disable(self.btn_stream)
+
+    def getstate(self):
+        # 0: stopped
+        # 1: downloading
+        # 2: streaming
+        return 0
+
+    def isadded(self):
+        # None: not added
+        # Download: added
+        return self.download
+
+    def on_btn_add(self):
+        if self.isadded():
+            remove_download(self.ihash)
+            self.download = None
+            self.set(self.btn_download, "Start")
+            self.disable(self.btn_download)
+        else:
+            add_download(self.ihash, self.get(self.name))
+            self.querydownload()
+            self.enable(self.btn_download)
+            self.set(self.btn_download, "Start")
+            self.state = 1
+
+    def on_btn_download(self):
+        state = self.getstate()
+        if state == 0:
+            start_download(self.ihash)
+            self.set(self.btn_download, "Pause")
+            self.state = 1
+        elif state in [1, 2]:
+            stop_download(self.ihash)
+            self.set(self.btn_download, "Start")
+            self.state = 0
+
+    def on_btn_close(self):
+        self.close()
+
+    def on_btn_files(self):
+        pass
+
+    def on_btn_stream(self):
+        pass
+
+    def on_btn_network(self):
+        check(0, 1200, "Search SWARM", self.ihash)
+
+    def querydownload(self):
+        for download in rest.jsget("downloads", get_peers=1, get_pieces=1)[0].get("downloads", []):
+            if download.get('infohash') == self.ihash:
+                self.download = download
+                return
+        self.download = None
+
+    def queryinfo(self):
+        self.info = rest.jsget("search", "infohash", self.ihash)[0]
 
     def onloop(self):
-        download_list = rest.jsquery("downloads", get_peers=1, get_pieces=1).get("downloads")
+        self.set(self.seeds, str(self.info["info"]["num_seeders"]))
+        self.set(self.leechs, str(self.info["info"]["num_leechers"]))
+        self.set(self.status, self.info["info"]["status"])
 
-        download_info = None
-        for download_info in download_list:
-            if download_info.get('infohash') == self.ihash:
-                break
 
-        progress = download_info.get('progress')
-        speed_up = download_info.get('speed_up')
-        speed_down = download_info.get('speed_down')
-        eta = download_info.get('eta')
-        filesize = download_info.get('size')
-        seeder = download_info.get('num_seeds')
-        leecher = download_info.get('num_peers')
-        destination = download_info.get('destination')
-        status = download_info.get('status')
+class check(gui.form):
+    def init(self, ihash, timeout=None, refresh=1):
+        self.wait = float(const.UIINTERVAL) / 5
+        if not timeout:
+            self.timeout = const.TRACKERTIMEOUT
+        else:
+            self.timeout = timeout
+        self.refresh = refresh
+        self.ihash = ihash
+        self.prg = self.progress("Progress")
+        self.status = self.label("")
+        self.txt = self.text("", 600)
+        self.btn_recheck = self.button("Recheck", self.on_btn_recheck)
+        self.btn_close = self.button("Close", self.on_btn_close)
+        self._txt = ""
+        self.hasrun = False
 
-        h_eta = '%s:%s' % (addon.local(33109).title(), util.humants(int(eta)))
-        progress_bar = int(progress * 100)
-        h_up = "%s: %sB/s" % (addon.local(33105).title(), util.humanbyte(speed_up))
-        h_down = "%s: %sB/s" % (addon.local(33107).title(), util.humanbyte(speed_down))
-        h_seed = "%s: %d" % (addon.local(33104).title(), seeder)
-        h_leech = "%s: %d" % (addon.local(33106).title(), leecher)
+    def oninit(self):
+        self.trackers = self.querytrackers()
+        self.tottime = self.timeout * len(self.trackers)
 
-        progress_dis = "%s: %sB/ %sB, %%%d, %s" % (
-                                             addon.local(33101),
-                                             util.humanbyte(filesize * progress),
-                                             util.humanbyte(filesize),
-                                             progress * 100,
-                                             h_eta
-                                             )
-        speed_dis = ", ".join([h_down, h_up, h_seed, h_leech])
-        dest_dis = "%s: %s" % (addon.local(33103).title(), destination)
+    def on_btn_close(self):
+        self.set(self.btn_close, "Closing ...")
+        self.close()
 
-        self.kprogress.update(progress_bar, progress_dis, speed_dis, dest_dis)
+    def querytrackers(self):
+        return rest.jsget("torrents", self.ihash, "trackers")[0].get("trackers", [])
 
-    def isclosed(self):
-        return self.kprogress.iscanceled()
+    def querytracker(self, tracker):
+        js, resp = rest.jsget("torrents", self.ihash, "health",
+                              timeout=self.timeout,
+                              refresh=self.refresh,
+                              trackers=tracker,
+                              requests={"timeout": self.timeout}
+                              )
+        if not resp:
+            return True, "Timeout in %d seconds" % self.timeout
+        status = resp.status_code
+        if not status == 200:
+            return True, "HTTP ERROR : %d" % status
+        elif "error" in js:
+            return True, js["error"]["message"]
+        else:
+            return False, js.get("health", {}).get(tracker, {})
+
+    def updatetext(self, txt):
+        self._txt = txt + self._txt
+        self.set(self.txt, self._txt)
+
+    def on_btn_recheck(self):
+        self.set(self.prg, 0)
+        inittime = time.time()
+        seeds = 0
+        leechs = 0
+        for tracker in self.trackers:
+            self.set(self.status, "Tracker : %s" % tracker)
+            t1 = time.time()
+            err, trs = self.querytracker(tracker)
+            if not err:
+                se = trs.get("seeders", 0)
+                le = trs.get("leechers", 0)
+                seeds += se
+                leechs += le
+                if se + le > 0:
+                    self.updatetext("------------------------------------\n")
+                    self.updatetext("Tracker: %s \n" % tracker)
+                    self.updatetext("    Returned %d Seeds, %d Leechs \n" % (se, le))
+                    self.updatetext("    in %.1f seconds \n" % (time.time() - t1))
+            t = time.time() - inittime
+            self.set(self.prg, t * 100 / self.tottime)
+        tottime = time.time() - inittime
+        self.set(self.prg, 100)
+        self.set(self.status, "Finished : S: %d, L:%d T: %.1fs" % (seeds, leechs, tottime))
+        self.updatetext("++++++++++++++++++++++++++++++++++++\n")
+        self.updatetext("Finished Searching: \n" +
+                        "Total found %d seeders \n" % seeds +
+                        "Total found %d leechers \n" % leechs +
+                        "Total in %.1f seconds\n" % tottime)
+        self.updatetext("++++++++++++++++++++++++++++++++++++\n")
+
+    def onloop(self):
+        if not self.hasrun:
+            self.on_btn_recheck()
+            self.hasrun = True

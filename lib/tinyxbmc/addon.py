@@ -22,6 +22,8 @@ import xbmcaddon
 import xbmc
 import os
 
+import traceback
+
 a = xbmcaddon.Addon()
 addonid = a.getAddonInfo('id')
 profile = a.getAddonInfo('profile')
@@ -85,24 +87,38 @@ def local(sid):
 class blockingloop(object):
     def __init__(self, *args, **kwargs):
         self.wait = 0.1
+        self.terminate = False
         self.init(*args, **kwargs)
-        self.onstart()
+        self.oninit()
+        e = None
+        self.__mon = None
         try:
-            mon = xbmc.Monitor()
-            while not (mon.abortRequested() or self.isclosed()):
-                self.onloop()
-                if mon.waitForAbort(self.wait) or self.isclosed():
+            self.__mon = xbmc.Monitor()
+            while not self.isclosed():
+                try:
+                    self.onloop()
+                except Exception, e:
+                    traceback.print_exc()
                     break
+                if self.__mon.waitForAbort(self.wait) or self.isclosed():
+                    break
+            del self.__mon
         except AttributeError:
-            while not (xbmc.abortRequested or self.isclosed()):
-                self.onloop()
+            while not self.isclosed():
+                try:
+                    self.onloop()
+                except Exception, e:
+                    traceback.print_exc()
+                    break
                 xbmc.sleep(self.wait * 1000)
         self.onclose()
+        if e:
+            raise(e)
 
     def init(self, *args, **kwargs):
         pass
 
-    def onstart(self):
+    def oninit(self):
         pass
 
     def onloop(self):
@@ -112,4 +128,10 @@ class blockingloop(object):
         pass
 
     def isclosed(self):
-        return False
+        if self.__mon:
+            return self.__mon.abortRequested() or self.terminate
+        else:
+            return xbmc.abortRequested or self.terminate
+
+    def close(self):
+        self.terminate = True
