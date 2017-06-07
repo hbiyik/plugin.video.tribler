@@ -31,6 +31,10 @@ import urllib
 _default_method = "index"
 
 
+def refresh():
+    xbmc.executebuiltin("Container.Refresh")
+
+
 class Contianer(object):
     def __init__(self, *iargs, **ikwargs):
         self.sysaddon = sys.argv[0]
@@ -83,7 +87,7 @@ class Contianer(object):
 
     def _update(self, wait):
         xbmc.sleep(wait * 1000)
-        xbmc.executebuiltin("Container.Refresh")
+        refresh()
 
     def init(self, *args, **kwargs):
         pass

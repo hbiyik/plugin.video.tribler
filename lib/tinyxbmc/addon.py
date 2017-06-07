@@ -87,7 +87,7 @@ def local(sid):
 class blockingloop(object):
     def __init__(self, *args, **kwargs):
         self.wait = 0.1
-        self.terminate = False
+        self.__terminate = False
         self.init(*args, **kwargs)
         self.oninit()
         e = None
@@ -101,17 +101,21 @@ class blockingloop(object):
                     traceback.print_exc()
                     break
                 if self.__mon.waitForAbort(self.wait) or self.isclosed():
+                    if not self.__terminate:
+                        self.onclose()
                     break
             del self.__mon
         except AttributeError:
-            while not self.isclosed():
+            while True:
                 try:
                     self.onloop()
                 except Exception, e:
                     traceback.print_exc()
                     break
+                if not self.isclosed():
+                    if not self.__terminate:
+                        self.onclose()
                 xbmc.sleep(self.wait * 1000)
-        self.onclose()
         if e:
             raise(e)
 
@@ -129,9 +133,10 @@ class blockingloop(object):
 
     def isclosed(self):
         if self.__mon:
-            return self.__mon.abortRequested() or self.terminate
+            return self.__mon.abortRequested() or self.__terminate
         else:
-            return xbmc.abortRequested or self.terminate
+            return xbmc.abortRequested or self.__terminate
 
     def close(self):
-        self.terminate = True
+        self.onclose()
+        self.__terminate = True

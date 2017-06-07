@@ -66,7 +66,7 @@ def progress(name):
     return dialog
 
 
-class form(xbmcgui.WindowDialog, addon.blockingloop):
+class form(addon.blockingloop, xbmcgui.WindowDialog):
     def __init__(self, w1, w2, header="", *args, **kwargs):
         xbmcgui.WindowDialog.__init__(self)
         self.setCoordinateResolution(0)
@@ -90,19 +90,13 @@ class form(xbmcgui.WindowDialog, addon.blockingloop):
                 "bool": ("setSelected", "getSelected", []),
                 "button": ("setLabel", "getLabel", []),
                 }
-        self.init(*args, **kwargs)
-        self.terminate = False
         self.__pre = None
-        self.__create(header)
-        self.show()
-        self.oninit()
-        self.block(self.wait, self.onloop, self.terminate)
+        self.__header = header
+        addon.blockingloop.__init__(self, *args, **kwargs)
 
-    class block(addon.blockingloop):
-        def init(self, wait, onloop, terminate):
-            self.wait = wait
-            self.onloop = onloop
-            self.terminate = terminate
+    def oninit(self):
+        self.__create(self.__header)
+        self.show()
 
     def __pos(self, eid, x, y, w, h):
         elem = self.getelem(eid)
@@ -168,7 +162,7 @@ class form(xbmcgui.WindowDialog, addon.blockingloop):
                         )
 
         for eid, (typ, label, clck, fcs, rh, elem) in self.__elems.iteritems():
-            if typ in ["label", "edit", "text"]:
+            if typ in ["label", "edit", "text", "bool"]:
                 y = self.__row(eid, rx, y, rh, label)
             if typ == "progress":
                 self.addControl(xbmcgui.ControlImage(rx, y, w, rh, _gray))
@@ -333,24 +327,20 @@ class form(xbmcgui.WindowDialog, addon.blockingloop):
                       ]:
             self.close()
 
-    def onFocus(self, controlId):
-        pass
-
     def onControl(self, ctrl):
         eid = self.__cmap.get(ctrl.getId())
         if eid:
             typ, lbl, clck, fcs, h, elem = self.__elems[eid]
             clck()
 
+    def close(self):
+        addon.blockingloop.close(self)
+        xbmcgui.WindowDialog.close(self)
+
     def init(self, *args, **kwargs):
         pass
 
-    def close(self):
-        self.onclose()
-        xbmcgui.WindowDialog.close(self)
-        self.terminate = True
-
-    def oninit(self):
+    def onFocus(self, controlId):
         pass
 
     def onclose(self):

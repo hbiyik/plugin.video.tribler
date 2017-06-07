@@ -19,6 +19,7 @@
 '''
 from tinyxbmc import addon
 from tinyxbmc import gui
+from tinyxbmc import container
 
 from plugin import util
 from plugin import const
@@ -146,11 +147,18 @@ class ui(gui.form):
 
     def oninit(self):
         #  self.querydownload()
-        self.set(self.status, "Querying Cache...")
-        self.queryinfo()
+        gui.form.oninit(self)
+        self.querycache()
+        self.update_ui()
+        self.hash = hash(repr(self.info))
+
+    def update_ui(self):
         self.set(self.status, self.info["info"]["status"])
         self.set(self.name, self.info["info"]["name"])
         self.set(self.fs, util.humanbyte(self.info["info"]["size"]))
+        self.set(self.seeds, str(self.info["info"]["num_seeders"]))
+        self.set(self.leechs, str(self.info["info"]["num_leechers"]))
+        self.set(self.status, self.info["info"]["status"])
 
     def update_btns(self):
         if self.getstate() == 0:
@@ -210,13 +218,15 @@ class ui(gui.form):
         self.close()
 
     def on_btn_files(self):
-        pass
+        files(1150, 50, "Files", self.ihash, self.info["files"])
 
     def on_btn_stream(self):
         pass
 
     def on_btn_network(self):
         check(0, 1200, "Search SWARM", self.ihash)
+        self.querycache()
+        self.update_ui()
 
     def querydownload(self):
         for download in rest.jsget("downloads", get_peers=1, get_pieces=1)[0].get("downloads", []):
@@ -225,22 +235,22 @@ class ui(gui.form):
                 return
         self.download = None
 
-    def queryinfo(self):
-        self.info = rest.jsget("search", "infohash", self.ihash)[0]
+    def querycache(self):
+        self.set(self.status, "Querying Cache...")
+        self.info = rest.jsget("torrents", self.ihash, "cache")[0]
+        self.set(self.status, "")
 
     def onloop(self):
-        self.set(self.seeds, str(self.info["info"]["num_seeders"]))
-        self.set(self.leechs, str(self.info["info"]["num_leechers"]))
-        self.set(self.status, self.info["info"]["status"])
+        self.update_ui()
+
+    def onclose(self):
+        if not hash(repr(self.info)) == self.hash:
+            container.refresh()
 
 
 class check(gui.form):
-    def init(self, ihash, timeout=None, refresh=1):
+    def init(self, ihash, refresh=1):
         self.wait = float(const.UIINTERVAL) / 5
-        if not timeout:
-            self.timeout = const.TRACKERTIMEOUT
-        else:
-            self.timeout = timeout
         self.refresh = refresh
         self.ihash = ihash
         self.prg = self.progress("Progress")
@@ -252,8 +262,9 @@ class check(gui.form):
         self.hasrun = False
 
     def oninit(self):
+        gui.form.oninit(self)
         self.trackers = self.querytrackers()
-        self.tottime = self.timeout * len(self.trackers)
+        self.tottime = const.TRACKERTIMEOUT * len(self.trackers)
 
     def on_btn_close(self):
         self.set(self.btn_close, "Closing ...")
@@ -263,14 +274,18 @@ class check(gui.form):
         return rest.jsget("torrents", self.ihash, "trackers")[0].get("trackers", [])
 
     def querytracker(self, tracker):
+        if tracker.lower() == "dht":
+            timeout = const.DHTTIMEOUT
+        else:
+            timeout = const.TRACKERTIMEOUT
         js, resp = rest.jsget("torrents", self.ihash, "health",
-                              timeout=self.timeout,
+                              timeout=timeout,
                               refresh=self.refresh,
                               trackers=tracker,
-                              requests={"timeout": self.timeout}
+                              requests={"timeout": timeout}
                               )
         if not resp:
-            return True, "Timeout in %d seconds" % self.timeout
+            return True, "Timeout in %d seconds" % timeout
         status = resp.status_code
         if not status == 200:
             return True, "HTTP ERROR : %d" % status
@@ -278,6 +293,9 @@ class check(gui.form):
             return True, js["error"]["message"]
         else:
             return False, js.get("health", {}).get(tracker, {})
+
+    def updatetorrent(self, seeders, leechers):
+        return rest.jspost("torrents", self.ihash, "health", seeders=seeders, leechers=leechers)
 
     def updatetext(self, txt):
         self._txt = txt + self._txt
@@ -313,8 +331,36 @@ class check(gui.form):
                         "Total found %d leechers \n" % leechs +
                         "Total in %.1f seconds\n" % tottime)
         self.updatetext("++++++++++++++++++++++++++++++++++++\n")
+        self.updatetorrent(seeds, leechs)
 
     def onloop(self):
         if not self.hasrun:
             self.on_btn_recheck()
             self.hasrun = True
+
+
+class files(gui.form):
+    def init(self, ihash, files=None):
+        self.ihash = ihash
+        if files:
+            self.files = files
+        else:
+            self.querycache()
+        for f in self.files:
+            print f
+            callback = self.clickfactory(self)
+            bid = self.bool(f["path"], callback.onclick)
+            callback.eid = bid
+        self.button("Close", self.close)
+
+    def querycache(self):
+        self.files = rest.jsget("torrents", self.ihash, "cache")[0].get("files", [])
+
+    class clickfactory():
+        def __init__(self, context):
+            self.gui = context
+
+        def onclick(self):
+            #  swap selection
+            #self.gui.set(self.eid, not self.gui.get(self.eid))
+            pass

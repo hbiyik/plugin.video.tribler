@@ -38,7 +38,7 @@ class stream_proxy(object):
 def savelogger(logger, lname):
     if isinstance(logger, logging.Logger):
         lf = os.path.join(const.LOGDIR, lname + ".log")
-        logfh = logging.handlers.RotatingFileHandler(lf, maxBytes=5000, encoding="utf-8")
+        logfh = logging.handlers.RotatingFileHandler(lf, maxBytes=5000)
         logfh.setLevel(const.LOGLVL)
         logfh.setFormatter(const.LOGFM)
         logger.addHandler(logfh)
