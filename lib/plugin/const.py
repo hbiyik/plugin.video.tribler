@@ -18,7 +18,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 import logging
-from tinyxbmc import addon
 import os
 
 ADDONNAME = "plugin.video.tribler"
@@ -26,20 +25,14 @@ APIPORT = 8085
 APIDOMAIN = "localhost"
 APIPROTO = "http"
 PERPAGE = 9
-APITIMEOUT = 5
+APITIMEOUT = 10
 TRACKERTIMEOUT = 3
 DHTTIMEOUT = 20
 LOGLVL = logging.DEBUG
-LOGFM = logging.Formatter('| %(name)s | %(levelname)s | %(asctime)s | %(message)s')
+LOGFM = logging.Formatter('| %(name)s | %(levelname)s | %(asctime)s | %(message)s  | %(pathname)s:%(lineno)s')
 MONINTERVAL = 2
 UIINTERVAL = 3
 CONTAINERINTERVAL = 5
-DATADIR = addon.profile
-_LOGDIR = "log"
-LOGDIR = os.path.join(DATADIR, _LOGDIR, "")
-for d in [DATADIR, LOGDIR]:
-    if not os.path.exists(d):
-        os.makedirs(d)
 DLSTATUS = {
             'DLSTATUS_ALLOCATING_DISKSPACE': 'ALLOCATING DISKSPACE',
             'DLSTATUS_WAITING4HASHCHECK': 'WAITING FOR HASHCHECK',
@@ -51,3 +44,4 @@ DLSTATUS = {
             'DLSTATUS_METADATA': 'FETCHING INFORMATION',
             'DLSTATUS_CIRCUITS': 'BUILDING CIRCUITS',
     }
+

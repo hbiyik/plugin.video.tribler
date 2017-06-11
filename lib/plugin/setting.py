@@ -1,8 +1,9 @@
 from plugin import rest
+from plugin import const
 from tinyxbmc import addon
 from tinyxbmc import gui
 
-s = addon.setting()
+s = addon.setting(const.ADDONNAME)
 
 
 class Setting(object):

@@ -89,6 +89,7 @@ class form(addon.blockingloop, xbmcgui.WindowDialog):
                 "text": ("setText", "reset", []),
                 "bool": ("setSelected", "getSelected", []),
                 "button": ("setLabel", "getLabel", []),
+                "list": ("getSelectedPosition", "selectItem", []),
                 }
         self.__pre = None
         self.__header = header
@@ -162,7 +163,7 @@ class form(addon.blockingloop, xbmcgui.WindowDialog):
                         )
 
         for eid, (typ, label, clck, fcs, rh, elem) in self.__elems.iteritems():
-            if typ in ["label", "edit", "text", "bool"]:
+            if typ in ["label", "edit", "text", "bool", "list"]:
                 y = self.__row(eid, rx, y, rh, label)
             if typ == "progress":
                 self.addControl(xbmcgui.ControlImage(rx, y, w, rh, _gray))
@@ -234,16 +235,19 @@ class form(addon.blockingloop, xbmcgui.WindowDialog):
                                     elem)
         return self.__eid
 
-    def list(self, label="", values=[], height=None):
+    def list(self, label="", values=[], onclick=None, height=None):
         if not height:
             height = self.__rowh
+        if not onclick:
+            onclick = self.__null
+        height = len(values) * height
         elem = xbmcgui.ControlList(0, 0, 0, 0)
         for value in values:
             elem.addItem(value)
         self.__eid += 1
         self.__elems[self.__eid] = ("list",
                                     label,
-                                    self.__null,
+                                    onclick,
                                     self.__null,
                                     height,
                                     elem)

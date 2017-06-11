@@ -23,13 +23,6 @@ import os
 import shutil
 
 
-def cleandata(*dirs):
-    for d in dirs:
-        td = os.path.join(const.DATADIR, "*")
-        if os.path.exists(td):
-            shutil.rmtree(td)
-
-
 def humants(ts):
     # to-do: make this nested and infinite
     if not isinstance(ts, (int, float)):

@@ -20,6 +20,7 @@
 import logging.handlers
 from plugin import const
 import os
+from tinyxbmc import addon
 
 
 class stream_proxy(object):
@@ -35,19 +36,24 @@ class stream_proxy(object):
         pass
 
 
-def savelogger(logger, lname):
+def savelogger(logger):
     if isinstance(logger, logging.Logger):
-        lf = os.path.join(const.LOGDIR, lname + ".log")
-        logfh = logging.handlers.RotatingFileHandler(lf, maxBytes=5000)
+        profile = addon.get_profile(const.ADDONNAME)
+        lf = os.path.join(profile, "debug.log")
+        logfh = logging.handlers.RotatingFileHandler(lf,
+                                                     maxBytes=1000000,
+                                                     backupCount=0)
         logfh.setLevel(const.LOGLVL)
         logfh.setFormatter(const.LOGFM)
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
         logger.addHandler(logfh)
         logger.setLevel(const.LOGLVL)
 
 
-def makelogger():
+def getlogger():
     logger = logging.getLogger(const.ADDONNAME)
-    savelogger(logger, const.ADDONNAME)
+    savelogger(logger)
     #  sys.stderr = stream_proxy(logger, logging.DEBUG)
     #  sys.stdout = stream_proxy(logger, logging.DEBUG)
     return logger

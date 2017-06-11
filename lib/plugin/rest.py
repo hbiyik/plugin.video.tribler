@@ -24,7 +24,7 @@ from plugin import log
 
 import pprint
 
-logger = log.makelogger()
+logger = log.getlogger()
 
 
 def _method(method, typ, *paths, **query):
@@ -43,7 +43,9 @@ def _method(method, typ, *paths, **query):
     try:
         response = requests.request(method, url, **kwargs)
     except requests.exceptions.ReadTimeout:
-        return {}, None
+        response = requests.Response()
+        response.status_code = 504
+        return {}, response
     js = response.json()
     print js
     logger.debug("Tribler REST:RESPONSE: \n %s" % pprint.pformat(js))

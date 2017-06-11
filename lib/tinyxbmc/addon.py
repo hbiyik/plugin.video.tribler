@@ -24,24 +24,41 @@ import os
 
 import traceback
 
-a = xbmcaddon.Addon()
-addonid = a.getAddonInfo('id')
-profile = a.getAddonInfo('profile')
-profile = xbmc.translatePath(profile).decode("utf-8")
+
+def get_addon(addon_name=""):
+    try:
+        a = xbmcaddon.Addon(addon_name)
+    except RuntimeError:
+        try:
+            a = xbmcaddon.Addon()
+        except RuntimeError:
+            a = None
+    return a
+
+
+def get_profile(addon_name=""):
+    a = get_addon(addon_name)
+    if a:
+        profile = a.getAddonInfo('profile')
+        return xbmc.translatePath(profile).decode("utf-8")
+    else:
+        return a
 
 
 class setting():
-    def __init__(self):
+    def __init__(self, name=""):
         self.e = "utf-8"
+        self.profile = get_profile(name)
+        self.a = get_addon(name)
 
     @staticmethod
-    def ischanged():
-        f = os.path.join(profile, "settings.xml")
+    def ischanged(name=""):
+        f = os.path.join(get_profile(name), "settings.xml")
         if os.path.exists(f):
             cur_s = str(os.path.getsize(f))
         else:
             cur_s = "-1"
-        f = os.path.join(profile, "settings.size")
+        f = os.path.join(get_profile(name), "settings.size")
         if os.path.exists(f):
             with open(f, "r") as sfile:
                 pre_s = sfile.read()
@@ -55,13 +72,13 @@ class setting():
             return True
 
     def getbool(self, variable):
-        return bool(a.getSetting(variable) == 'true')
+        return bool(self.a.getSetting(variable) == 'true')
 
     def getstr(self, variable):
-        return str(a.getSetting(variable).decode(self.e))
+        return str(self.a.getSetting(variable).decode(self.e))
 
     def getint(self, variable):
-        val = a.getSetting(variable)
+        val = self.a.getSetting(variable)
         if isinstance(val, (int, float)):
             return int(val)
         elif isinstance(val, (str, unicode)) and val.isdigit():
@@ -70,18 +87,22 @@ class setting():
             return -1
 
     def getfloat(self, variable):
-        return float(a.getSetting(variable))
+        return float(self.a.getSetting(variable))
 
     def set(self, key, value):
         if isinstance(value, bool):
             value = str(value).lower()
         elif not isinstance(value, (str, unicode)):
             value = str(value)
-        return a.setSetting(key, value)
+        return self.a.setSetting(key, value)
 
 
-def local(sid):
-    return a.getLocalizedString(sid).encode('utf-8')
+def local(sid, addon_name=""):
+    a = get_addon(addon_name)
+    if a:
+        return a.getLocalizedString(sid).encode('utf-8')
+    else:
+        return xbmc.getLocalizedString(sid)
 
 
 class blockingloop(object):
@@ -115,7 +136,7 @@ class blockingloop(object):
                 if not self.isclosed():
                     if not self.__terminate:
                         self.onclose()
-                xbmc.sleep(self.wait * 1000)
+                xbmc.sleep(int(self.wait * 1000))
         if e:
             raise(e)
 

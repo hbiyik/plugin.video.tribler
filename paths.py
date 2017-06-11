@@ -1,9 +1,6 @@
 import os
 import sys
 
-import xbmcaddon
-
-
-ldir = os.path.join(xbmcaddon.Addon().getAddonInfo(
-    "path").decode("utf-8"), "lib")
+basepath = os.path.dirname(os.path.realpath(__file__))
+ldir = os.path.join(basepath, "lib")
 sys.path.append(ldir)

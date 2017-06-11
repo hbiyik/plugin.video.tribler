@@ -21,6 +21,7 @@ from tinyxbmc import container
 
 from plugin import rest
 from plugin import torrent
+from plugin import form
 
 
 class index(container.Contianer):
@@ -42,4 +43,4 @@ class index(container.Contianer):
         self.view(ihash)
 
     def view(self, ihash):
-        torrent.ui(300, 800, "Tribler", ihash)
+        form.cache(300, 800, "Tribler", ihash)
